@@ -18,6 +18,7 @@ import {
   Upload,
   ClipboardPaste,
 } from 'lucide-react';
+import { parseScheduleImageAI } from '../services/aiService';
 import { toPng } from 'html-to-image';
 import * as XLSX from 'xlsx';
 import confetti from 'canvas-confetti';
@@ -158,22 +159,12 @@ export const StudentScheduleTab: React.FC<StudentScheduleTabProps> = ({
             mime = 'image/jpeg';
           }
           
-          const response = await fetch('/api/parse-schedule-image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              imageBase64: base64Data,
-              mimeType: mime,
-            }),
+          const parsedClasses = await parseScheduleImageAI({
+            imageBase64: base64Data,
+            mimeType: mime,
           });
 
-          const data = await response.json();
-          if (!response.ok || !data.success) {
-            throw new Error(data.error || 'No se pudo leer la captura de horario automáticamente.');
-          }
-
-          const parsedClasses: any[] = data.schedule || [];
-          if (parsedClasses.length === 0) {
+          if (!parsedClasses || parsedClasses.length === 0) {
             throw new Error('No se detectaron clases en la imagen. Asegúrate de que la captura incluya los nombres de los cursos y las horas, o agrégalas con "+ Agregar Clase".');
           }
 

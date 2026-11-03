@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { CourseConfig, CycleId, EvaluationGroup, EvaluationItem } from '../types';
 import { FileUp, Sparkles, X, Check, Loader2, AlertCircle, FileText, ArrowRight, BookOpen } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { parseSyllabusAI } from '../services/aiService';
 
 interface SyllabusUploadModalProps {
   isOpen: boolean;
@@ -143,27 +144,18 @@ export const SyllabusUploadModal: React.FC<SyllabusUploadModalProps> = ({
         mimeType = selectedFile.type || 'application/pdf';
       }
 
-      // Call server AI endpoint
-      const res = await fetch('/api/parse-syllabus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: pastedText,
-          fileBase64,
-          mimeType,
-        }),
+      // Universal AI syllabus parser (works with API key on GitHub Pages and backend proxy)
+      const course = await parseSyllabusAI({
+        text: pastedText,
+        fileBase64,
+        mimeType,
       });
 
-      if (!res.ok) {
-        throw new Error('El servidor de IA no respondió favorablemente.');
-      }
-
-      const data = await res.json();
-      if (data.success && data.course) {
-        setExtractedCourse(data.course);
+      if (course) {
+        setExtractedCourse(course);
         confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
       } else {
-        throw new Error(data.error || 'Respuesta inválida');
+        throw new Error('Respuesta inválida');
       }
     } catch (err: any) {
       console.warn('Fallback to heuristic text extraction:', err);

@@ -39,6 +39,7 @@ import { CapiIntroModal } from './components/CapiIntroModal';
 import { CartaElgaModal } from './components/CartaElgaModal';
 import { CapiAiTab } from './components/CapiAiTab';
 import { CourseGradesChart } from './components/CourseGradesChart';
+import { sendChatMessageToCapi, generateLocalCapiAdvice } from './services/aiService';
 import {
   FileUp,
   Plus,
@@ -530,41 +531,25 @@ export default function App() {
     setIsSendingAiChat(true);
 
     try {
-      // Build context summary from current cycle courses and grades
-      const coursesSummary = currentCycleCourses
-        .map((c) => {
-          const res = calculateCourse(c, grades);
-          return `• ${c.name}: Acumulado ${res.accumulated}/20 (Estado: ${res.statusLabel}, Necesita promedio ${res.neededAverageFor11 ?? 'N/A'} para 11)`;
-        })
-        .join('\n');
-
-      const selectedCourse = currentCycleCourses.find((c) => c.id === selectedCourseTab);
-
-      const res = await fetch('/api/chat-capi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'advisor',
-          messages: updatedMessages.map((m) => ({ role: m.role === 'user' ? 'user' : 'model', content: m.content })),
-          imageBase64,
-          mimeType,
-          context: {
-            coursesSummary,
-            currentGpa: semesterStats.gpa,
-            selectedCourse: selectedCourse ? { name: selectedCourse.name, accumulated: calculateCourse(selectedCourse, grades).accumulated } : null,
-          },
-        }),
+      const reply = await sendChatMessageToCapi({
+        messages: updatedMessages.map((m) => ({
+          role: m.role === 'user' ? 'user' : 'model',
+          content: m.content,
+        })),
+        context: {
+          courses: currentCycleCourses,
+          grades,
+          currentGpa: semesterStats.gpa,
+          selectedCourseId: selectedCourseTab,
+        },
+        imageBase64,
+        mimeType,
       });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al comunicarse con el Capi');
-      }
 
       const botMessage: ChatMessage = {
         id: `msg-bot-${Date.now()}`,
         role: 'assistant',
-        content: data.reply,
+        content: reply,
         timestamp: new Date().toISOString(),
       };
 
@@ -576,10 +561,18 @@ export default function App() {
         )
       );
     } catch (err: any) {
+      console.warn('Capi chat error, falling back to local advisor:', err);
+      const fallbackReply = generateLocalCapiAdvice(text, {
+        courses: currentCycleCourses,
+        grades,
+        currentGpa: semesterStats.gpa,
+        selectedCourseId: selectedCourseTab,
+      });
+
       const errorMessage: ChatMessage = {
         id: `msg-bot-${Date.now()}`,
         role: 'assistant',
-        content: '🐾 Hubo un pequeño error al contactar al Capi. Por favor revisa tu conexión e inténtalo nuevamente.',
+        content: fallbackReply,
         timestamp: new Date().toISOString(),
       };
       setChatConversations((prev) =>

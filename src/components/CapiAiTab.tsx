@@ -11,7 +11,10 @@ import {
   Lightbulb,
   CheckCircle2,
   Image as ImageIcon,
+  Key,
 } from 'lucide-react';
+import { ApiKeyModal } from './ApiKeyModal';
+import { getStoredApiKey } from '../services/aiService';
 
 interface CapiAiTabProps {
   courses: CourseConfig[];
@@ -48,6 +51,8 @@ export const CapiAiTab: React.FC<CapiAiTabProps> = ({
   const [attachedImageBase64, setAttachedImageBase64] = useState<string | null>(null);
   const [attachedMimeType, setAttachedMimeType] = useState<string>('image/png');
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(() => !!getStoredApiKey());
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -263,6 +268,33 @@ export const CapiAiTab: React.FC<CapiAiTabProps> = ({
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col justify-between bg-white dark:bg-stone-900 overflow-hidden">
+        {/* Top Header Bar: Context & GitHub Pages AI status */}
+        <div className="px-4 py-2 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between gap-2 bg-[#FAF7F2]/50 dark:bg-stone-900/60">
+          <div className="flex items-center gap-1.5 text-xs truncate">
+            <span className="text-stone-400">Contexto:</span>
+            <span className="font-bold text-stone-700 dark:text-stone-300 truncate">
+              {focusedCourse ? focusedCourse.name : 'Todos los cursos del ciclo'}
+            </span>
+          </div>
+
+          <button
+            onClick={() => setIsApiKeyModalOpen(true)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all shrink-0 ${
+              hasApiKey
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-800'
+                : 'bg-amber-100/90 hover:bg-amber-200/80 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-800'
+            }`}
+            title="Configurar tu API Key de Gemini gratis para usar IA en GitHub Pages"
+          >
+            {hasApiKey ? (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            ) : (
+              <Key className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
+            )}
+            <span>{hasApiKey ? 'Gemini IA Conectada' : 'Activar Gemini Gratis (GitHub)'}</span>
+          </button>
+        </div>
+
         {/* Chat Messages Log */}
         <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4">
           {/* Quick starter prompts banner */}
@@ -444,6 +476,13 @@ export const CapiAiTab: React.FC<CapiAiTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Gemini API Key Configuration Modal for GitHub Pages */}
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
+        onKeyUpdated={() => setHasApiKey(!!getStoredApiKey())}
+      />
     </div>
   );
 };

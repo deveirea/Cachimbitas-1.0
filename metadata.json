@@ -1,0 +1,6 @@
+{
+  "name": "Cachimbitas · Calculadora Académica & El Capiómetro",
+  "description": "Calculadora de notas universitarias, simulador de ciclo académico, Modo Cementerio y outfits interactivos con el Capiómetro.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
